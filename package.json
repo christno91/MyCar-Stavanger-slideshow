@@ -1,0 +1,9 @@
+{
+  "name": "mycar-finn-slideshow-vercel",
+  "private": true,
+  "type": "module",
+  "engines": {"node": ">=18"},
+  "dependencies": {
+    "fast-xml-parser": "^4.5.0"
+  }
+}

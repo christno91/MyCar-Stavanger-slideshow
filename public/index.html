@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="refresh" content="3600">
+  <title>MyCar Stavanger | Bilslideshow</title>
+  <link rel="stylesheet" href="/public/styles.css" />
+</head>
+<body>
+  <main class="wrap">
+    <header class="top">
+      <div class="brand">
+        <div class="logo">MyCar Stavanger</div>
+        <div class="sub">Utvalgte biler akkurat nå</div>
+      </div>
+      <div class="meta">
+        <div class="clock" id="clock"></div>
+        <div class="updated" id="updated"></div>
+      </div>
+    </header>
+
+    <section class="stage">
+      <div class="media">
+        <img id="carImage" alt="Bilbilde" />
+      </div>
+      <div class="panel">
+        <div class="title" id="carTitle"></div>
+        <div class="facts">
+          <div class="fact"><div class="k">Årsmodell</div><div class="v" id="carYear"></div></div>
+          <div class="fact"><div class="k">Kilometer</div><div class="v" id="carKm"></div></div>
+          <div class="fact"><div class="k">Pris</div><div class="v" id="carPrice"></div></div>
+        </div>
+        <div class="cta">
+          <span class="hint">Se flere detaljer på finn.no</span>
+          <span class="url" id="carUrl"></span>
+        </div>
+      </div>
+    </section>
+
+    <footer class="bottom">
+      <div class="status" id="status"></div>
+    </footer>
+  </main>
+
+  <script src="/public/app.js"></script>
+</body>
+</html>
