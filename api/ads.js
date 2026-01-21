@@ -26,6 +26,69 @@ function parseFinnAtom(xmlText) {
     removeNSPrefix: true
   });
 
+  const asArray = (v) => (v == null ? [] : Array.isArray(v) ? v : [v]);
+
+  const getNodeValue = (node) =>
+    node?.['@_value'] ?? node?.['#text'] ?? node?.text ?? node?._ ?? null;
+
+  const getAdataValue = (adata, name) => {
+    if (!adata) return null;
+
+    // 1) finn:field (ofte brukt for year/mileage)
+    const fields = asArray(adata.field);
+    const hitField = fields.find((f) => (f?.['@_name'] || f?.name) === name);
+    const fieldVal = getNodeValue(hitField);
+    if (fieldVal != null) return fieldVal;
+
+    // 2) property (slik du allerede prøvde)
+    const props = asArray(adata.property);
+    const hitProp = props.find((p) => (p?.['@_name'] || p?.name) === name);
+    const propVal = getNodeValue(hitProp);
+    if (propVal != null) return propVal;
+
+    return null;
+  };
+
+  const getAdataPrice = (adata) => {
+    if (!adata) return null;
+
+    // 1) finn:price (ofte brukt)
+    const prices = asArray(adata.price);
+    const pick =
+      prices.find((p) => (p?.['@_name'] || p?.name) === 'main') ||
+      prices.find((p) => (p?.['@_name'] || p?.name) === 'net') ||
+      prices[0];
+
+    const priceVal = getNodeValue(pick);
+    if (priceVal != null) return priceVal;
+
+    // 2) fallback: field/property "price"
+    return getAdataValue(adata, 'price');
+  };
+
+  const getImageUrl = (entry) => {
+    // media:content og media:thumbnail kan bli "content"/"thumbnail" når removeNSPrefix = true.
+    // Atom har også <content>, men den har vanligvis ikke @_url.
+    const contentNodes = asArray(entry?.content).filter((c) => c?.['@_url']);
+    const thumbNodes = asArray(entry?.thumbnail).filter((t) => t?.['@_url']);
+
+    const url =
+      contentNodes[0]?.['@_url'] ||
+      thumbNodes[0]?.['@_url'] ||
+      null;
+
+    if (url) return url.startsWith('http://') ? url.replace('http://', 'https://') : url;
+
+    // fallback til <link rel="enclosure" type="image/...">
+    const links = asArray(entry?.link);
+    const img =
+      links.find((l) => String(l?.['@_type'] || '').startsWith('image/')) ||
+      links.find((l) => (l?.['@_rel'] || '') === 'enclosure');
+
+    const href = img?.['@_href'] ?? null;
+    return href?.startsWith('http://') ? href.replace('http://', 'https://') : href;
+  };
+
   const obj = parser.parse(xmlText);
   const feed = obj?.feed;
   const entries = feed?.entry ? (Array.isArray(feed.entry) ? feed.entry : [feed.entry]) : [];
@@ -33,27 +96,20 @@ function parseFinnAtom(xmlText) {
   const cars = entries.map((e) => {
     const title = pickFirst(e?.title) ?? '';
 
-    // FINN extensions live in "finn:adata" but with removeNSPrefix it becomes adata.
     const adata = e?.adata;
-    const props = adata?.property ? (Array.isArray(adata.property) ? adata.property : [adata.property]) : [];
 
-    // property nodes usually look like: { "@_name": "price", "#text": "199000" }
-    const propMap = new Map();
-    for (const p of props) {
-      const key = p?.['@_name'];
-      const val = p?.['#text'] ?? p?.text ?? p?.['@_value'];
-      if (key) propMap.set(key, val);
-    }
+    // Årsmodell kan være "modelYear" eller "year" avhengig av feed
+    const modelYearRaw = getAdataValue(adata, 'modelYear') ?? getAdataValue(adata, 'year');
+    const mileageRaw = getAdataValue(adata, 'mileage') ?? getAdataValue(adata, 'kilometers');
+    const priceRaw = getAdataPrice(adata);
 
-    const price = toInt(propMap.get('price'));
-    const mileage = toInt(propMap.get('mileage'));
-    const modelYear = toInt(propMap.get('modelYear'));
+    const modelYear = toInt(modelYearRaw);
+    const mileage = toInt(mileageRaw);
+    const price = toInt(priceRaw);
 
-    // Try to find image in links. Atom uses <link rel="enclosure" type="image/jpeg" href="..."/>
+    const imageUrl = getImageUrl(e);
+
     const links = e?.link ? (Array.isArray(e.link) ? e.link : [e.link]) : [];
-    const img = links.find((l) => (l?.['@_type'] || '').startsWith('image/')) || links.find((l) => (l?.['@_rel'] || '') === 'enclosure');
-    const imageUrl = img?.['@_href'] ?? null;
-
     const adUrl = links.find((l) => (l?.['@_rel'] || '') === 'alternate')?.['@_href'] ?? null;
 
     return {
